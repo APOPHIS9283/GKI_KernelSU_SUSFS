@@ -70,16 +70,20 @@ jobs:
           # Step D: Run KernelSU-Next's official integration mechanics from their development branch
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -
           
-          # Step E: Distribute SUSFS engine source definitions into place
-          cp ../../susfs4ksu/kernel_patches/fs/susfs.c fs/
-          cp ../../susfs4ksu/kernel_patches/include/linux/susfs.h include/linux/
+          # Step E: Distribute SUSFS engine source definitions into place using absolute anchors to avoid mapping mixups
+          cp "$ABS_WORKSPACE/../susfs4ksu/kernel_patches/fs/susfs.c" fs/
+          cp "$ABS_WORKSPACE/../susfs4ksu/kernel_patches/include/linux/susfs.h" include/linux/
           
           # Step F: Bind SUSFS flag manually to KernelSU-Next's structural Makefile configuration
           grep -q "ccflags-y += -DCONFIG_KSU_SUSFS" drivers/kernelsu/Makefile || echo "ccflags-y += -DCONFIG_KSU_SUSFS" >> drivers/kernelsu/Makefile
           
-          # Step G: Apply the core GKI 6.1 baseline patch directly onto the kernel tree folder
-          cp ../../susfs4ksu/kernel_patches/6.1/50_add_susfs_in_kernel-6.1.patch .
-          patch -p1 < 50_add_susfs_in_kernel-6.1.patch
+          # Step G: Dynamically locate the 6.1 patch file inside the susfs4ksu repo to prevent name mismatches
+          SUSFS_PATCH=$(find "$ABS_WORKSPACE/../susfs4ksu/kernel_patches/" -name "50_add_susfs_in_*.patch" | grep "6.1" | head -n 1)
+          echo "Found SUSFS patch file at: $SUSFS_PATCH"
+          
+          # Copy and apply the dynamically matched patch file layout
+          cp "$SUSFS_PATCH" .
+          patch -p1 < $(basename "$SUSFS_PATCH")
           
           # Return to the primary build execution directory
           cd "$ABS_WORKSPACE"
